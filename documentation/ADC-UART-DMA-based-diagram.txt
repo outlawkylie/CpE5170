@@ -1,0 +1,91 @@
+title Example of UART-ADC-UART interaction with DMA (UART) and ISRs
+
+participant main()
+
+
+entryspacing 0.1
+
+participantgroup #lightblue HW (no % CPU)
+participantspacing 1
+#participant TIM1
+participant UART
+participant ADC
+end 
+
+
+participantgroup #yellow ISRs
+participantspacing 0.1
+participant UART ISR
+participant ADC ISR
+
+end
+
+activate main()
+activate UART #blue
+note over UART:rx
+space -1
+parallel
+
+UART->UART ISR:   RX interrrupt\n       flag
+UART --#red>>main() :Suspend 
+deactivate main()
+deactivate UART
+activate UART ISR
+
+space 1
+UART ISR-->ADC: Start Conversion
+activate ADC #magenta
+
+space 1
+UART ISR->main():Resume
+deactivate UART ISR
+activate main()
+space 0.1
+ADC->(1)ADC ISR: Interrupt
+deactivate ADC
+activate ADC ISR
+ADC ISR--#red>>ADC:  
+ADC--#red>>main():Suspend  
+
+
+deactivate main()
+space 0.5
+ADC ISR-->UART:Start TX (DMA)           
+activate UART #green
+#note over ADC ISR: exit
+space 0.1
+ADC ISR->main(): Resume
+deactivate ADC ISR
+parallel off
+
+## Next byte processing
+activate main()
+parallel
+space 0.8
+
+rbox over UART:--n-bytes\n       * \n10 bit-times\n\nautomatically\nfed into UART--
+space 5
+
+UART->(1)UART ISR:    Interrupt
+deactivate UART
+UART ISR--#red>>UART:  
+UART--#red>>main():Suspend  
+deactivate main()
+activate UART ISR
+
+
+space 0.1
+space 1
+abox over UART ISR:completed-callback
+space 0.1
+UART ISR-->main(): Resume
+deactivate UART ISR
+
+activate main()
+parallel off
+
+
+parallel off
+
+
+#parallel off

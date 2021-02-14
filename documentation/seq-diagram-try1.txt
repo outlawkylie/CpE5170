@@ -1,0 +1,56 @@
+title This is a title
+
+#Alice->Bob:Click and drag to create a request or\ntype it in the source area to the left
+#Alice<--Bob:drag to move
+#note over Bob,Double click to edit text:Click the **?** icon for **instructions** and **examples**
+#Bob->(3)Double click to edit text:non-instantaneous message
+
+participant main()
+
+participantgroup #lightgreen FreeRTOS
+participant Scheduler
+participant Task 1
+participant Task 2
+end 
+
+
+participantgroup #lightblue HW
+participantspacing 1
+participant TIM1
+participant UART
+participant ADC
+end 
+
+
+participantgroup #yellow ISRs
+participant ADC ISR
+participant UART ISR
+end
+
+
+
+ADC ISR-->ADC: Start Conversion
+note over ADC ISR: exit
+
+
+parallel 
+activate main()
+main()->Scheduler:Start Scheduler
+activate Scheduler #green
+deactivate main()
+#deactivateafter main()
+
+parallel off
+
+parallel 
+activate UART
+space 2
+deactivate UART
+
+activate ADC
+space 1
+parallel 
+ADC-->>(1)ADC ISR:Flag set\nHW calls ISR 
+deactivate ADC
+
+parallel off
