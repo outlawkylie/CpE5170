@@ -125,10 +125,10 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
-	sch_init ();
+	sch_init (); //scheduler init
 
 
-	lab1_init();
+	lab1_init(); //tasks init
 
 	// Start Timer 4 when SYS TICK increments (to synchronize with it)
 	uint32_t old_t = HAL_GetTick();
