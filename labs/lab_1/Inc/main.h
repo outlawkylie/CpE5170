@@ -84,6 +84,8 @@ void Error_Handler(void);
 #define B1_GPIO_Port GPIOC
 #define Test_pin_Pin GPIO_PIN_1
 #define Test_pin_GPIO_Port GPIOC
+#define LT_Pin GPIO_PIN_1
+#define LT_GPIO_Port GPIOA
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
