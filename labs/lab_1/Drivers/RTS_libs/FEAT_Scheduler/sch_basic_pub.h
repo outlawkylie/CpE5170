@@ -8,6 +8,8 @@
 //#include "HW_LIB/rtc.h"
 #include <inttypes.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 #include "stm32f4xx_hal.h"
 
 /****************************************************************************
@@ -48,6 +50,8 @@ typedef uint8_t list_size_t;	// variable to store size of a table/buffer/queue
 /****************************************************************************
 **	Variables definition (PUBLIC)
 ****************************************************************************/
+
+
 
 /****************************************************************************
 **	Functions declarations / prototypes (PUBLIC)

@@ -5,7 +5,7 @@
 #include "sch_basic_prv.h"
 #include "sch_basic_pub.h"
 
-
+#include "loop_timer.h"
 //#include "API_frames.h"
 //#include "tsp_common_pub.h"
 //#include "Application.h"
@@ -42,6 +42,8 @@ char *	sch_callback_name[MAX_TIMEOUTS];
 sch_loop_func_t sch_loop_funcs[MAX_LOOPS];
 uint8_t sch_loop_funcs_on[MAX_LOOPS];
 
+// loop timer
+struct loop_timer LT;
 /****************************************************************************
 **	Variables definition (PUBLIC)
 ****************************************************************************/
@@ -96,7 +98,7 @@ void sch_power_up ( void )
 void sch_init ( void )
 {
 	// Any initializations - e.g. periodic scheduler job/task
-
+	LT.loop_counting = 0xFF;
 }
 
 
@@ -121,6 +123,7 @@ extern UART_HandleTypeDef huart2;
 void sch_loop( void )
 {
 
+	begin_loop_timer( &LT );
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); // Pin PC6=1 before FOR loop
 	for(current_loop_idx=0; current_loop_idx< MAX_LOOPS; current_loop_idx++)
 	{
@@ -132,6 +135,8 @@ void sch_loop( void )
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);// Pin PC8=0 et the end of each loop iteration
 	}
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); // Pin PC6=1 after FOR loop ends
+	stop_loop_timer( &LT );
+	print_loop_timer(&LT );
 
 	while ( (SCH_NO_TIMEOUT_ID != sch_tout_head )
 		&& (sch_timeout_ticks[sch_tout_head ] < rtc_get_ticks()) )
