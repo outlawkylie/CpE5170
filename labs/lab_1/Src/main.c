@@ -38,7 +38,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <loop_timer.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -67,6 +66,7 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart2;
@@ -81,6 +81,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -122,6 +123,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_TIM4_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
 	sch_init (); //scheduler init
@@ -136,12 +138,17 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim4);
 	HAL_TIM_OC_Start(&htim4, TIM_CHANNEL_1 );
 
+	HAL_TIM_Base_Start(&htim2);
+	HAL_TIM_Base_Start_IT(&htim2);
+	HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1 );
+
+
 	// Calibration section - enable to verify calibration settings
 	// Experimental timer 4 correction:
 	#define CAL_DIV 10
 
-//#if(1)
-#if(0)
+#if(1)
+//#if(0)
 	// Maximum calibration points
 	#define CAL_MAX 10
 	static int t[CAL_MAX] = {1,2,3,4,5,9,10,11,1001,10000};
@@ -151,7 +158,7 @@ int main(void)
 	for ( int i = 0; i<CAL_MAX; i++)
 	{
 		while (old_t + t[i] + 1 > HAL_GetTick()); // Wait for specific number of ticks and them measure the timer value to get calibration
-		t4_cal[i] = __HAL_TIM_GET_COUNTER(&htim4);
+		t4_cal[i] = __HAL_TIM_GET_COUNTER(&htim2);
 	}
 	char temp_str[30];
 	sprintf(temp_str, "%d, old ticks\n",old_t);
@@ -159,13 +166,13 @@ int main(void)
 	for (int i=0; i< CAL_MAX; i++)
 	{
 		int32_t expected = ( (1000* (t[i] % 10) ) - (t[i]/CAL_DIV) ); while(expected<0) expected+=10000; expected %= 10000;
-		sprintf(temp_str, "%d ticks (mod 10ms) => 10000-%lu=%lu, expected=%lu us\n", t[i], t4_cal[i], 10000-t4_cal[i], expected);
+		sprintf(temp_str, "%d ticks (mod 10ms) => %lu, expected=%lu us\n", t[i], t4_cal[i], expected);
 		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 	}
 	// In my runs it demonstrated a 1/10000th difference between HAL/system ticks (1ms resolution) and timer 4 count (1us resolution)
 	//     i.e. for very 10,000 ms ticks the timer 4 showed 1ms less on timer count (correction by - ticks/10)
 #endif // Calibration section
-
+return;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -272,6 +279,65 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 83;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 10000;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 

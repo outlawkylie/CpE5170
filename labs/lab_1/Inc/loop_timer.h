@@ -23,8 +23,8 @@ struct loop_timer {
 	uint32_t total_time;
 
 	/* variables updated each loop */
-	long long int start_tick;
-	long long int end_tick;
+	uint32_t start_tick;
+	uint32_t end_tick;
 	uint8_t loop_counting;
 };
 
