@@ -124,6 +124,8 @@ void sch_loop( void )
 {
 
 	begin_loop_timer( &LT );
+
+	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); // Pin PC6=1 before FOR loop
 	for(current_loop_idx=0; current_loop_idx< MAX_LOOPS; current_loop_idx++)
 	{
@@ -135,6 +137,7 @@ void sch_loop( void )
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);// Pin PC8=0 et the end of each loop iteration
 	}
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); // Pin PC6=1 after FOR loop ends
+	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
 	stop_loop_timer( &LT );
 	print_loop_timer(&LT );
 

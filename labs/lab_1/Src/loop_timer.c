@@ -9,17 +9,6 @@
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim4;
 
-/*void start_TIM2()
-{
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-	TIM2->CR1 |= TIM_CR1_EN;
-}
-
-uint16_t read_TIM2()
-{
-	return TIM2->CNT;
-}*/
-
 void begin_loop_timer( struct loop_timer * LT )
 	{
 	reset_loop_timer( *LT );
