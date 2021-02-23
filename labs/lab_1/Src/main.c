@@ -147,11 +147,11 @@ int main(void)
 	// Experimental timer 4 correction:
 	#define CAL_DIV 10
 
-#if(1)
-//#if(0)
+//if(1)
+#if(0)
 	// Maximum calibration points
 	#define CAL_MAX 10
-	static int t[CAL_MAX] = {1,2,3,4,5,9,10,11,1001,10000};
+	static int t[CAL_MAX] = {1,2,3,4,5,9,10,11,1001,10010};
 	static uint32_t t4_cal[CAL_MAX] = {0};
 
 //	for (int t=1009; t<20000; t+=1000)
@@ -160,19 +160,23 @@ int main(void)
 		while (old_t + t[i] + 1 > HAL_GetTick()); // Wait for specific number of ticks and them measure the timer value to get calibration
 		t4_cal[i] = __HAL_TIM_GET_COUNTER(&htim2);
 	}
-	char temp_str[30];
-	sprintf(temp_str, "%d, old ticks\n",old_t);
+	char temp_str[50];
+	sprintf(temp_str, "* * * * * * * * * * * * * * * * * * * * * * *\n");
+	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),10);
+	sprintf(temp_str, "%ld, old ticks\n",old_t);
 	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),10);
 	for (int i=0; i< CAL_MAX; i++)
 	{
-		int32_t expected = ( (1000* (t[i] % 10) ) - (t[i]/CAL_DIV) ); while(expected<0) expected+=10000; expected %= 10000;
-		sprintf(temp_str, "%d ticks (mod 10ms) => %lu, expected=%lu us\n", t[i], t4_cal[i], expected);
+		int32_t expected = (((1000* t[i]) % 100000));
+		sprintf(temp_str, "%d ticks => %lu us, expected=%lu us\n", t[i], t4_cal[i], expected);
 		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 	}
+	sprintf(temp_str, "* * * * * * * * * * * * * * * * * * * * * * *\n");
+	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 	// In my runs it demonstrated a 1/10000th difference between HAL/system ticks (1ms resolution) and timer 4 count (1us resolution)
 	//     i.e. for very 10,000 ms ticks the timer 4 showed 1ms less on timer count (correction by - ticks/10)
 #endif // Calibration section
-return;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -304,7 +308,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 83;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10000;
+  htim2.Init.Period = 100000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)

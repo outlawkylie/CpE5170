@@ -5,6 +5,7 @@
  *      Author: Maciej
  */
 #include "tasks_lab_1.h"
+#include "loop_timer.h"
 #include "../Drivers/RTS_libs/FEAT_Scheduler/sch_basic_pub.h"
 
 #include "stm32f4xx_hal_adc.h"
@@ -21,6 +22,8 @@ char str_LED_BLINK_2[]="LED2";
 char str_RTR_CH_SWITCH[] = "RTR_CH_SWITCH_MMCR";
 
 char str_TEST[] = "TEST 1\n";
+
+struct loop_timer BLT = {.location = BLINK_LOOP, .loop_counting = 0xFF};
 
 #define LED_G_PORT GPIOA
 #define LED_G_PIN	GPIO_PIN_5
@@ -49,17 +52,29 @@ void lab1_init()
 	adc_loop_id = sch_add_loop(read_adc_loop);
 	uart_loop_id = sch_add_loop(check_uart_loop);
 	input_loop_id = sch_add_loop(check_input_loop);
+
+	init_loop( &BLT );
 }
 
 
 
 void timer_cb_test1(uint8_t *x)
 {
+	//timing analysis
+	stop_loop_timer( &BLT );
+	print_loop_timer( &BLT );
+	reset_loop_timer( BLT );
+
+	//functionality
 	HAL_GPIO_WritePin(LED_G_PORT,LED_G_PIN, 1); //Toggle LED
 	sch_create_timeout(rtc_get_ticks()+1000, timer_cb_test2, 0, str_LED_BLINK_2);
 }
 void timer_cb_test2(uint8_t *x)
 {
+	//timing analysis
+	BLT.start_tick = rtc_get_ticks();
+
+	//functionality
 	HAL_GPIO_WritePin(LED_G_PORT, LED_G_PIN, 0); //Toggle LED
 	sch_create_timeout(rtc_get_ticks()+1000, timer_cb_test1, 0, str_LED_BLINK_1);
 }

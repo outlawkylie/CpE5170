@@ -42,8 +42,11 @@ char *	sch_callback_name[MAX_TIMEOUTS];
 sch_loop_func_t sch_loop_funcs[MAX_LOOPS];
 uint8_t sch_loop_funcs_on[MAX_LOOPS];
 
-// loop timer
-struct loop_timer LT;
+// inner loop timer
+struct loop_timer ILT = {.location = INNER_LOOP, .loop_counting = 0xFF};
+
+//outer loop timer
+struct loop_timer OLT = {.location = OUTER_LOOP, .loop_counting = 0xFF};
 /****************************************************************************
 **	Variables definition (PUBLIC)
 ****************************************************************************/
@@ -64,6 +67,7 @@ char str_NONE[] = "NONE";
 
 /**
   * sch_power_up () - power up (tasks/system) SCHEDULING module
+  * Sets up 30 empty tasks
   */
 void sch_power_up ( void )
 {
@@ -81,8 +85,6 @@ void sch_power_up ( void )
 	sch_tout_head = SCH_NO_TIMEOUT_ID; // empty
 	sch_tout_free = 0; // first empty ID
 
-
-
 	for(i=0; i< MAX_LOOPS; i++)
 	{
 		sch_loop_funcs[i] = SCH_NO_FUNC_ID;
@@ -98,7 +100,8 @@ void sch_power_up ( void )
 void sch_init ( void )
 {
 	// Any initializations - e.g. periodic scheduler job/task
-	LT.loop_counting = 0xFF;
+	init_loop( &ILT ); // initialize loop timers
+	init_loop( &OLT );
 }
 
 
@@ -122,24 +125,33 @@ extern UART_HandleTypeDef huart2;
   */
 void sch_loop( void )
 {
+	/* stop previous outer loop timer */
+	stop_loop_timer( &OLT );
+	print_loop_timer( &OLT );
 
-	begin_loop_timer( &LT );
+	/* begin new outer loop timer */
+	begin_loop_timer( &OLT );
+
+	/* begin inner loop timing */
+	begin_loop_timer( &ILT );
 
 	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); // Pin PC6=1 before FOR loop
 	for(current_loop_idx=0; current_loop_idx< MAX_LOOPS; current_loop_idx++)
 	{
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1); // Pin PC8=1 before each loop iteration
+
 		if (sch_loop_funcs_on[current_loop_idx] == SCH_FUNC_ON)
 		{
 			(sch_loop_funcs[current_loop_idx])();			
 		}
+
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);// Pin PC8=0 et the end of each loop iteration
 	}
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); // Pin PC6=1 after FOR loop ends
 	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
-	stop_loop_timer( &LT );
-	print_loop_timer( &LT );
+	stop_loop_timer( &ILT );
+	print_loop_timer( &ILT );
 
 	while ( (SCH_NO_TIMEOUT_ID != sch_tout_head )
 		&& (sch_timeout_ticks[sch_tout_head ] < rtc_get_ticks()) )
@@ -215,7 +227,7 @@ void sch_remove_timeout(uint8_t tidx, char*name)
 }
 
 /**
-  * sch_correct_time_shift (offset) - updates schedule timeouts to accomodate
+  * sch_correct_time_shift (offset) - updates schedule timeouts to accommodate
   *		for the RTC shift due to clock (re-)synchronization (e.g. from BEAM pkt)
   */
 void sch_correct_time_shift ( int32_t offset)
@@ -225,10 +237,10 @@ void sch_correct_time_shift ( int32_t offset)
 }
 
 /**
-  * sch_create_timeout (timeout, callback_func) - sets a new timeout at "timoeut"
+  * sch_create_timeout (timeout, callback_func) - sets a new timeout at "timeout"
   *		RTC ticks (absolute value). When timeout expires, the "callback_func" is
   *		executed (function has to be REENTRANT and accept timeout ID as param)
-  *	RETURNS: timeout ID or "SCH_NO_TIMEOUT_ID" if unsuccesful
+  *	RETURNS: timeout ID or "SCH_NO_TIMEOUT_ID" if unsuccessful
   */
 uint8_t sch_create_timeout( rtc_tick_t timeout, sch_cb_func_t callback_func, uint8_t* t_context, char*name)
 {
@@ -278,7 +290,7 @@ uint8_t sch_create_timeout( rtc_tick_t timeout, sch_cb_func_t callback_func, uin
 /**
   * sch_add_loop( sch_loop_func_t loop_func) - sets a new loop function to
   *		be executed every time in the main loop
-  *	RETURNS: loop function ID or "SCH_NO_FUNC_ID" if unsuccesful
+  *	RETURNS: loop function ID or "SCH_NO_FUNC_ID" if unsuccessful
   */
 uint8_t sch_add_loop( sch_loop_func_t loop_func)
 {
