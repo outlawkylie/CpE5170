@@ -184,6 +184,7 @@ void sch_loop( void )
 		(sch_callback_funcs[timeout_idx ])(sch_callback_context[timeout_idx] );
 		// Free the Timer slot for others to use
 		sch_timeout_state[timeout_idx] = SCH_STATE_IDLE;
+		//print_timeouts();
 	}
 }
 
@@ -352,12 +353,15 @@ list_index_t get_free_timeout()
 void print_timeouts()
 {
 	list_index_t i;
+	char temp_str[50];
 	for(i=0; i < MAX_TIMEOUTS-20; i++)
 	{
-		printf(" %d/%d,/%s\n" 
+		sprintf(temp_str, " %d/%d,/%s\n"
 			   , sch_timeout_state[i]
 				   , sch_timeout_order[i]
 				   , sch_callback_name[i]);
+		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
+
 	}	
 }
 
