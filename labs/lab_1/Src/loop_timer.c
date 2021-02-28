@@ -54,7 +54,7 @@ void print_loop_timer( struct loop_timer * LT )
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 			sprintf(temp_str, "%s has been run %i times.\n", LT->Name, (LT->total_loops));
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
-			sprintf(temp_str, "%s had an average runtime of %.2f us.\n", LT->Name, (float)((LT->total_time)/(LT->total_loops))/10);
+			sprintf(temp_str, "%s had an average runtime of %.2f us.\n", LT->Name, (float)(((LT->total_time))/(LT->total_loops))/9.3);
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 			sprintf(temp_str, "* * * * * * * * * * * * * * * * * * * * * * *\n");
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);

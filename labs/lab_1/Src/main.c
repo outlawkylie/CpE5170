@@ -147,8 +147,8 @@ int main(void)
 	// Experimental timer 4 correction:
 	#define CAL_DIV 10
 
-//#if(1)
-#if(0)
+#if(1)
+//#if(0)
 	// Maximum calibration points
 	#define CAL_MAX 10
 	static int t[CAL_MAX] = {1,2,3,4,5,9,10,11,1001,10010};
@@ -306,7 +306,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 83;
+  htim2.Init.Prescaler = 8;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 100000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
