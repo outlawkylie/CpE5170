@@ -167,7 +167,7 @@ int main(void)
 	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),10);
 	for (int i=0; i< CAL_MAX; i++)
 	{
-		int32_t expected = (((1000* t[i]) % 100000));
+		int32_t expected = (((7000* t[i]) % 100000));
 		sprintf(temp_str, "%d ticks => %lu us, expected=%lu us\n", t[i], t4_cal[i], expected);
 		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 	}
@@ -306,7 +306,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 8;
+  htim2.Init.Prescaler = 12-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 100000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
