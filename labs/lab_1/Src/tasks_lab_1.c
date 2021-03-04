@@ -24,6 +24,9 @@ char str_RTR_CH_SWITCH[] = "RTR_CH_SWITCH_MMCR";
 char str_TEST[] = "TEST 1\n";
 
 struct loop_timer BLT = {.location = BLINK_LOOP, .loop_counting = 0xFF};
+struct loop_timer ADC_LT = {.location = ADC_LOOP, .loop_counting = 0xFF};
+struct loop_timer RX_LT = {.location = UART_RX_LOOP, .loop_counting = 0xFF};
+struct loop_timer TX_LT = {.location = UART_TX_LOOP, .loop_counting = 0xFF};
 
 #define LED_G_PORT GPIOA
 #define LED_G_PIN	GPIO_PIN_5
@@ -54,6 +57,9 @@ void lab1_init()
 	input_loop_id = sch_add_loop(check_input_loop);
 
 	init_loop( &BLT );
+	init_loop( &ADC_LT );
+	init_loop( &RX_LT );
+	init_loop( &TX_LT );
 }
 
 
@@ -62,7 +68,6 @@ void timer_cb_test1(uint8_t *x)
 {
 	//timing analysis
 	stop_loop_timer( &BLT );
-	print_loop_timer( &BLT );
 	reset_loop_timer( BLT );
 
 	//functionality
@@ -92,6 +97,7 @@ uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads
 
 void check_input_loop()
 {
+
 	if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
 	{
 		if (HAL_OK != HAL_UART_Transmit(&huart2, msg1, strlen((char*)msg1), 5) )

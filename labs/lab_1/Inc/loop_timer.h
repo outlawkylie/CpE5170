@@ -23,6 +23,9 @@ enum {
 	INNER_LOOP,
 	OUTER_LOOP,
 	BLINK_LOOP,
+	ADC_LOOP,
+	UART_RX_LOOP,
+	UART_TX_LOOP,
 	NUM_LOOPS
 } Loop_Location_type ;
 

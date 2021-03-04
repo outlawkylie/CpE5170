@@ -31,6 +31,7 @@ void stop_loop_timer( struct loop_timer * LT )
 		LT->total_time += (elapsed);
 		}
 	reset_loop_timer( *LT );
+	print_loop_timer( LT );
 	return;
 	} /* stop_loop_timer() */
 
@@ -62,6 +63,23 @@ void print_loop_timer( struct loop_timer * LT )
 			LT->total_time = 1;
 			}
 		}
+	else if (LT->location == UART_RX_LOOP || UART_TX_LOOP || ADC_LOOP)
+		{
+		if( LT->total_loops == 1024 && LT->loop_counting )
+			{
+			LT->loop_counting = 0x00;
+			char temp_str[50];
+			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
+			sprintf(temp_str, "%s has been run %i times.\n", LT->Name, (LT->total_loops));
+			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
+			sprintf(temp_str, "%s had an average runtime of %.2f us.\n", LT->Name, (float)(((LT->total_time))/(LT->total_loops))/7);
+			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
+			sprintf(temp_str, "* * * * * * * * * * * * * * * * * * * * * * *\n");
+			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
+
+			LT->total_time = 1;
+			}
+		}
 	else //LT->location == BLINK_LOOP
 		{
 		if( LT->total_loops == 30 && LT->loop_counting )
@@ -75,6 +93,8 @@ void print_loop_timer( struct loop_timer * LT )
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 			sprintf(temp_str, "* * * * * * * * * * * * * * * * * * * * * * *\n");
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
+
+			LT->total_time = 1;
 			}
 		}
 	}
@@ -95,6 +115,18 @@ void init_loop( struct loop_timer * LT )
 
 		case( BLINK_LOOP ):
 			LT->Name = "Blink loop";
+			break;
+
+		case( ADC_LOOP ):
+			LT->Name = "ADC loop";
+			break;
+
+		case( UART_RX_LOOP ):
+			LT->Name = "Rx loop";
+			break;
+
+		case( UART_TX_LOOP ):
+			LT->Name = "Tx loop";
 			break;
 
 		default:

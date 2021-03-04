@@ -127,7 +127,6 @@ void sch_loop( void )
 {
 	/* stop previous outer loop timer */
 	stop_loop_timer( &OLT );
-	print_loop_timer( &OLT );
 
 	/* begin new outer loop timer */
 	begin_loop_timer( &OLT );
@@ -151,7 +150,6 @@ void sch_loop( void )
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); // Pin PC6=1 after FOR loop ends
 	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
 	stop_loop_timer( &ILT );
-	print_loop_timer( &ILT );
 
 	while ( (SCH_NO_TIMEOUT_ID != sch_tout_head )
 		&& (sch_timeout_ticks[sch_tout_head ] < rtc_get_ticks()) )
