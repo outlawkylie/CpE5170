@@ -98,18 +98,21 @@ uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads
 void check_input_loop()
 {
 
+	begin_loop_timer( &TX_LT );
 	if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
 	{
 		if (HAL_OK != HAL_UART_Transmit(&huart2, msg1, strlen((char*)msg1), 5) )
 			printf("Debug error while UART Tx");
 		// 5 ticks ~= 5ms
 	}
+	stop_loop_timer( &TX_LT );
 }
 
 uint8_t buf[10];
 uint16_t buf_len = 1; // reading one char at a time
 void check_uart_loop()
 {
+	begin_loop_timer( &RX_LT );
 	if (HAL_OK == HAL_UART_Receive(&huart2, buf, buf_len, 0))
 	{
 		// receive successful a byte
@@ -124,11 +127,13 @@ void check_uart_loop()
 			HAL_UART_Transmit(&huart2, msg_help, strlen((char*)msg_help),10);
 		}
 	}
+	stop_loop_timer( &RX_LT );
 }
 
 
 void read_adc_loop()
 {
+	begin_loop_timer( &ADC_LT );
 	if (HAL_OK == HAL_ADC_PollForConversion(&hadc1, 0))
 	{
 		// ADC ready
@@ -137,4 +142,5 @@ void read_adc_loop()
 		sprintf(temp_str, "T=%d", (int)temp);
 		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
 	}
+	stop_loop_timer( &ADC_LT );
 }

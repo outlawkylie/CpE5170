@@ -63,7 +63,9 @@ void print_loop_timer( struct loop_timer * LT )
 			LT->total_time = 1;
 			}
 		}
-	else if (LT->location == UART_RX_LOOP || UART_TX_LOOP || ADC_LOOP)
+	else if ((LT->location == UART_RX_LOOP) ||
+			 (LT->location == UART_TX_LOOP) ||
+			 (LT->location == ADC_LOOP))
 		{
 		if( LT->total_loops == 1024 && LT->loop_counting )
 			{
@@ -94,7 +96,6 @@ void print_loop_timer( struct loop_timer * LT )
 			sprintf(temp_str, "* * * * * * * * * * * * * * * * * * * * * * *\n");
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 
-			LT->total_time = 1;
 			}
 		}
 	}

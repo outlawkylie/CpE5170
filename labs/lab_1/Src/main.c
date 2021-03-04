@@ -147,8 +147,8 @@ int main(void)
 	// Experimental timer 4 correction:
 	#define CAL_DIV 10
 
-#if(1)
-//#if(0)
+//#if(1)
+#if(0)
 	// Maximum calibration points
 	#define CAL_MAX 10
 	static int t[CAL_MAX] = {1,2,3,4,5,9,10,11,1001,10010};
