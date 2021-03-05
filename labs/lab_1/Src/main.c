@@ -102,6 +102,7 @@ const uint8_t RX_BUFF_SZ = 10;
 const uint8_t TX_BUFF_SZ = 50;
 volatile uint8_t rx_buff[1];
 volatile uint8_t tx_buff[50];
+uint16_t temperature;
 //uint8_t byte;
 
 /* USER CODE END 0 */
@@ -159,7 +160,7 @@ int main(void)
 	HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1 );
 
 	HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
-	//HAL_UART_Transmit_IT(&huart2, (uint8_t *)tx_buff, 50);
+	HAL_ADC_Start_IT(&hadc1);
 
 	// Calibration section - enable to verify calibration settings
 	// Experimental timer 4 correction:
@@ -274,10 +275,10 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
@@ -556,11 +557,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
-    /* Transmit one byte with 100 ms timeout */
-    HAL_UART_Transmit(&huart2, rx_buff, 1, 100);
+	begin_loop_timer( &RX_LT );
+
+	// receive successful a byte
+	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
+	{
+		// Start temperature reading from ADC
+		HAL_ADC_Start(&hadc1);
+		begin_loop_timer( &ADC_LT );
+	}
+	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
+	{
+		// Start temperature reading from ADC
+		HAL_UART_Transmit(&huart2, msg_help, strlen((char*)msg_help),10);
+	}
+	stop_loop_timer( &RX_LT );
+
 
     /* Receive one byte in interrupt mode */
-    HAL_UART_Receive_IT(&huart2, rx_buff, 1);
+    HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
 
 }
 
@@ -572,6 +587,19 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
 	__NOP();
+}
+
+void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef* hadc)
+{
+	// ADC ready
+	char temp_str[50];
+	uint32_t temperature = HAL_ADC_GetValue(&hadc1);
+	sprintf(temp_str, "T=%d", (int)temperature);
+	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
+
+	HAL_ADC_Start_IT(&hadc1);
+
+	stop_loop_timer( &ADC_LT );
 }
 /* USER CODE END 4 */
 

@@ -52,7 +52,7 @@ void lab1_init()
 {
 	timer_cb_test1(NULL);
 
-	adc_loop_id = sch_add_loop(read_adc_loop);
+	//adc_loop_id = sch_add_loop(read_adc_loop);
 	//uart_loop_id = sch_add_loop(check_uart_loop);
 	//input_loop_id = sch_add_loop(check_input_loop);
 
@@ -127,7 +127,7 @@ void timer_cb_test2(uint8_t *x)
 }*/
 
 
-void read_adc_loop()
+/*void read_adc_loop()
 {
 	begin_loop_timer( &ADC_LT );
 	if (HAL_OK == HAL_ADC_PollForConversion(&hadc1, 0))
@@ -139,4 +139,4 @@ void read_adc_loop()
 		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
 	}
 	stop_loop_timer( &ADC_LT );
-}
+}*/
