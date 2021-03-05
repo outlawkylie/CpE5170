@@ -43,6 +43,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "tasks_lab_1.h"
+#include "loop_timer.h"
 #include "../Drivers/RTS_libs/FEAT_Scheduler/sch_basic_pub.h"
 #include <string.h>
 
@@ -69,9 +70,17 @@ ADC_HandleTypeDef hadc1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+struct loop_timer TX_LT = {.location = UART_TX_LOOP, .loop_counting = 0xFF};
+struct loop_timer ADC_LT = {.location = ADC_LOOP, .loop_counting = 0xFF};
+struct loop_timer RX_LT = {.location = UART_RX_LOOP, .loop_counting = 0xFF};
+
+uint8_t msg1[] = "Triggered!";
+uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads ADC1 when asked with letter 't'";
+
 
 /* USER CODE END PV */
 
@@ -82,12 +91,18 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+const uint8_t RX_BUFF_SZ = 10;
+const uint8_t TX_BUFF_SZ = 50;
+volatile uint8_t rx_buff[1];
+volatile uint8_t tx_buff[50];
+//uint8_t byte;
 
 /* USER CODE END 0 */
 
@@ -98,7 +113,7 @@ static void MX_TIM2_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	sch_power_up ();
+  sch_power_up ();
 
   /* USER CODE END 1 */
 
@@ -124,6 +139,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM4_Init();
   MX_TIM2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
 	sch_init (); //scheduler init
@@ -142,6 +158,8 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1 );
 
+	HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
+	//HAL_UART_Transmit_IT(&huart2, (uint8_t *)tx_buff, 50);
 
 	// Calibration section - enable to verify calibration settings
 	// Experimental timer 4 correction:
@@ -186,7 +204,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  sch_loop();
+	  //sch_loop();
   }
   /* USER CODE END 3 */
 }
@@ -405,6 +423,39 @@ static void MX_TIM4_Init(void)
 }
 
 /**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -478,10 +529,50 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == GPIO_PIN_13)
+		{
+		begin_loop_timer( &TX_LT );
+		if (HAL_OK != HAL_UART_Transmit(&huart2, msg1, strlen((char*)msg1), 5) )
+			printf("Debug error while UART Tx");
+		// 5 ticks ~= 5ms
+		stop_loop_timer( &TX_LT );
+		}
+	else
+		{
+		return;
+		}
+}
 
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+    /* Transmit one byte with 100 ms timeout */
+    HAL_UART_Transmit(&huart2, rx_buff, 1, 100);
+
+    /* Receive one byte in interrupt mode */
+    HAL_UART_Receive_IT(&huart2, rx_buff, 1);
+
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	__NOP();
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	__NOP();
+}
 /* USER CODE END 4 */
 
 /**

@@ -142,7 +142,7 @@ void sch_loop( void )
 
 		if (sch_loop_funcs_on[current_loop_idx] == SCH_FUNC_ON)
 		{
-			(sch_loop_funcs[current_loop_idx])();			
+			//(sch_loop_funcs[current_loop_idx])();
 		}
 
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);// Pin PC8=0 et the end of each loop iteration

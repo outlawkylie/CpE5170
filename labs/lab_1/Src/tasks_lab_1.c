@@ -24,9 +24,9 @@ char str_RTR_CH_SWITCH[] = "RTR_CH_SWITCH_MMCR";
 char str_TEST[] = "TEST 1\n";
 
 struct loop_timer BLT = {.location = BLINK_LOOP, .loop_counting = 0xFF};
-struct loop_timer ADC_LT = {.location = ADC_LOOP, .loop_counting = 0xFF};
-struct loop_timer RX_LT = {.location = UART_RX_LOOP, .loop_counting = 0xFF};
-struct loop_timer TX_LT = {.location = UART_TX_LOOP, .loop_counting = 0xFF};
+extern struct loop_timer ADC_LT;
+extern struct loop_timer RX_LT;
+extern struct loop_timer TX_LT;
 
 #define LED_G_PORT GPIOA
 #define LED_G_PIN	GPIO_PIN_5
@@ -53,8 +53,8 @@ void lab1_init()
 	timer_cb_test1(NULL);
 
 	adc_loop_id = sch_add_loop(read_adc_loop);
-	uart_loop_id = sch_add_loop(check_uart_loop);
-	input_loop_id = sch_add_loop(check_input_loop);
+	//uart_loop_id = sch_add_loop(check_uart_loop);
+	//input_loop_id = sch_add_loop(check_input_loop);
 
 	init_loop( &BLT );
 	init_loop( &ADC_LT );
@@ -90,12 +90,8 @@ void timer_cb_test2(uint8_t *x)
 //							, uint8_t *pData, uint16_t Size, uint32_t Timeout);
 //HAL_StatusTypeDef HAL_UART_Receive(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size, uint32_t Timeout);
 
-uint8_t msg1[] = "Triggered!";
-uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads ADC1 when asked with letter 't'";
 
-
-
-void check_input_loop()
+/*void check_input_loop()
 {
 
 	begin_loop_timer( &TX_LT );
@@ -106,12 +102,12 @@ void check_input_loop()
 		// 5 ticks ~= 5ms
 	}
 	stop_loop_timer( &TX_LT );
-}
+}*/
 
-uint8_t buf[10];
-uint16_t buf_len = 1; // reading one char at a time
-void check_uart_loop()
+/*void check_uart_loop()
 {
+	uint8_t buf[10];
+	uint16_t buf_len = 1; // reading one char at a time
 	begin_loop_timer( &RX_LT );
 	if (HAL_OK == HAL_UART_Receive(&huart2, buf, buf_len, 0))
 	{
@@ -128,7 +124,7 @@ void check_uart_loop()
 		}
 	}
 	stop_loop_timer( &RX_LT );
-}
+}*/
 
 
 void read_adc_loop()
