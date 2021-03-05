@@ -77,6 +77,8 @@ UART_HandleTypeDef huart2;
 struct loop_timer TX_LT = {.location = UART_TX_LOOP, .loop_counting = 0xFF};
 struct loop_timer ADC_LT = {.location = ADC_LOOP, .loop_counting = 0xFF};
 struct loop_timer RX_LT = {.location = UART_RX_LOOP, .loop_counting = 0xFF};
+struct loop_timer BLT = {.location = BLINK_LOOP, .loop_counting = 0xFF};
+
 
 uint8_t msg1[] = "Triggered!";
 uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads ADC1 when asked with letter 't'";
@@ -202,10 +204,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  //sch_loop();
+	  sch_loop();
   }
   /* USER CODE END 3 */
 }
@@ -325,7 +328,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 12-1;
+  htim2.Init.Prescaler = 11;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 7000000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -594,12 +597,23 @@ void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef* hadc)
 	// ADC ready
 	char temp_str[50];
 	uint32_t temperature = HAL_ADC_GetValue(&hadc1);
-	sprintf(temp_str, "T=%d", (int)temperature);
+	sprintf(temp_str, "T=%d\n", (int)temperature);
 	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
 
 	HAL_ADC_Start_IT(&hadc1);
 
 	stop_loop_timer( &ADC_LT );
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	stop_loop_timer( &BLT );
+
+	HAL_GPIO_TogglePin(LED_G_PORT,LED_G_PIN);
+
+	begin_loop_timer( &BLT );
+	char temp_str[50];
+	HAL_TIM_Base_Start_IT(&htim2);
 }
 /* USER CODE END 4 */
 

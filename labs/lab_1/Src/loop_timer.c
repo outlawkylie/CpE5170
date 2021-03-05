@@ -13,7 +13,8 @@ extern TIM_HandleTypeDef htim2;
 void begin_loop_timer( struct loop_timer * LT )
 	{
 	reset_loop_timer( *LT );
-	LT->start_tick = __HAL_TIM_GET_COUNTER(&htim2);
+	if (LT->location == BLINK_LOOP) { LT->start_tick = rtc_get_ticks(); }
+	else { LT->start_tick = __HAL_TIM_GET_COUNTER(&htim2);}
 	return;
 	} /* begin_loop_timer() */
 
@@ -22,7 +23,7 @@ void stop_loop_timer( struct loop_timer * LT )
 	{
 
 	if (LT->location == BLINK_LOOP) { LT->end_tick = rtc_get_ticks(); }
-	else { LT->end_tick = __HAL_TIM_GET_COUNTER(&htim2); }
+	else { LT->end_tick = __HAL_TIM_GET_COUNTER(&htim2);}
 
 	if( LT->start_tick < LT->end_tick )
 		{
@@ -48,12 +49,12 @@ void print_loop_timer( struct loop_timer * LT )
 	{
 	if( LT->location != BLINK_LOOP )
 		{
-		if( LT->total_loops == 65535 && LT->loop_counting )
+		if( LT->total_loops == 30 && LT->loop_counting )
 			{
 			LT->loop_counting = 0x00;
 			char temp_str[50];
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
-			sprintf(temp_str, "%s has been run %i times.\n", LT->Name, (LT->total_loops));
+			sprintf(temp_str, "\n%s has been run %i times.\n", LT->Name, (LT->total_loops));
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 			sprintf(temp_str, "%s had an average runtime of %.2f us.\n", LT->Name, (float)(((LT->total_time))/(LT->total_loops))/7);
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
@@ -67,12 +68,12 @@ void print_loop_timer( struct loop_timer * LT )
 			 (LT->location == UART_TX_LOOP) ||
 			 (LT->location == ADC_LOOP))
 		{
-		if( LT->total_loops == 1024 && LT->loop_counting )
+		if( LT->total_loops == 30 && LT->loop_counting )
 			{
 			LT->loop_counting = 0x00;
 			char temp_str[50];
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
-			sprintf(temp_str, "%s has been run %i times.\n", LT->Name, (LT->total_loops));
+			sprintf(temp_str, "\n%s has been run %i times.\n", LT->Name, (LT->total_loops));
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 			sprintf(temp_str, "%s had an average runtime of %.2f us.\n", LT->Name, (float)(((LT->total_time))/(LT->total_loops))/7);
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
@@ -89,7 +90,7 @@ void print_loop_timer( struct loop_timer * LT )
 			LT->loop_counting = 0x00;
 			char temp_str[50];
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
-			sprintf(temp_str, "%s has been run %i times.\n", LT->Name, (LT->total_loops));
+			sprintf(temp_str, "\n%s has been run %i times.\n", LT->Name, (LT->total_loops));
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);
 			sprintf(temp_str, "%s had an average runtime of %.2f ms.\n", LT->Name, (float)((LT->total_time)/(LT->total_loops)));
 			HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),10);

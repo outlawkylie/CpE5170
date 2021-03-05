@@ -22,4 +22,7 @@ extern void timer_cb_test2(uint8_t *x);
 
 extern void check_input_loop ( void );
 
+#define LED_G_PORT GPIOA
+#define LED_G_PIN	GPIO_PIN_5
+
 #endif /* TASKS_LAB_1_H_ */

@@ -125,13 +125,13 @@ extern UART_HandleTypeDef huart2;
   */
 void sch_loop( void )
 {
-	/* stop previous outer loop timer */
+	// stop previous outer loop timer
 	stop_loop_timer( &OLT );
 
-	/* begin new outer loop timer */
+	 //begin new outer loop timer
 	begin_loop_timer( &OLT );
-
-	/* begin inner loop timing */
+/*
+	 begin inner loop timing
 	begin_loop_timer( &ILT );
 
 	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
@@ -183,7 +183,7 @@ void sch_loop( void )
 		// Free the Timer slot for others to use
 		sch_timeout_state[timeout_idx] = SCH_STATE_IDLE;
 		//print_timeouts();
-	}
+	}*/
 }
 
 

@@ -23,13 +23,10 @@ char str_RTR_CH_SWITCH[] = "RTR_CH_SWITCH_MMCR";
 
 char str_TEST[] = "TEST 1\n";
 
-struct loop_timer BLT = {.location = BLINK_LOOP, .loop_counting = 0xFF};
 extern struct loop_timer ADC_LT;
 extern struct loop_timer RX_LT;
 extern struct loop_timer TX_LT;
-
-#define LED_G_PORT GPIOA
-#define LED_G_PIN	GPIO_PIN_5
+extern struct loop_timer BLT;
 
 void read_adc_loop();
 void check_uart_loop();
@@ -50,7 +47,7 @@ void lab1_power_up()
 
 void lab1_init()
 {
-	timer_cb_test1(NULL);
+	//timer_cb_test1(NULL);
 
 	//adc_loop_id = sch_add_loop(read_adc_loop);
 	//uart_loop_id = sch_add_loop(check_uart_loop);
