@@ -47,9 +47,10 @@ void reset_loop_timer( struct loop_timer LT )
 
 void print_loop_timer( struct loop_timer * LT )
 	{
-	if( LT->location != BLINK_LOOP )
+	if( LT->location == OUTER_LOOP ||
+		LT->location == INNER_LOOP )
 		{
-		if( LT->total_loops == 30 && LT->loop_counting )
+		if( LT->total_loops == 60000 && LT->loop_counting )
 			{
 			LT->loop_counting = 0x00;
 			char temp_str[50];

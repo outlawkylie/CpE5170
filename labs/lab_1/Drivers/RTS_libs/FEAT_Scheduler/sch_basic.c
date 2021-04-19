@@ -130,60 +130,6 @@ void sch_loop( void )
 
 	 //begin new outer loop timer
 	begin_loop_timer( &OLT );
-/*
-	 begin inner loop timing
-	begin_loop_timer( &ILT );
-
-	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); // Pin PC6=1 before FOR loop
-	for(current_loop_idx=0; current_loop_idx< MAX_LOOPS; current_loop_idx++)
-	{
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1); // Pin PC8=1 before each loop iteration
-
-		if (sch_loop_funcs_on[current_loop_idx] == SCH_FUNC_ON)
-		{
-			//(sch_loop_funcs[current_loop_idx])();
-		}
-
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);// Pin PC8=0 et the end of each loop iteration
-	}
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); // Pin PC6=1 after FOR loop ends
-	HAL_GPIO_TogglePin(GPIOA, LT_Pin); // Toggle pin - Task 4
-	stop_loop_timer( &ILT );
-
-	while ( (SCH_NO_TIMEOUT_ID != sch_tout_head )
-		&& (sch_timeout_ticks[sch_tout_head ] < rtc_get_ticks()) )
-	{
-#if(0) // disable reporting
-//#if(1) // enable reporting
-		int32_t t4_diff = 0;
-		uint32_t t4 = 0;
-		t4 = __HAL_TIM_GET_COUNTER(&htim4);
-		t4_diff = 10000 - t4;//
-		// Experimental timer 4 correction:
-		#define CAL_DIV 10
-		int32_t expected = ( (1000* (sch_timeout_ticks[sch_tout_head] % 10) ) - (sch_timeout_ticks[sch_tout_head]/CAL_DIV) );
-			while(expected<0) expected+=10000;
-			expected %= 10000;
-		int diff = t4_diff - expected;
-		char temp_str[30];
-		//sprintf(temp_str, "D=%d,exp=%lu,t4=%lu,t=%lu,sys=%lu\n", diff, expected, t4_diff, sch_timeout_ticks[sch_tout_head], rtc_get_ticks());
-		sprintf(temp_str, "D=%d us\n", diff);
-		HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen((char*)temp_str),30);
-#endif // report delay for TIMEOUT execution
-		// Remove from head for the purpose of consistency
-		ATOMIC(
-			   	timeout_idx = sch_tout_head ;
-				sch_tout_head  = sch_timeout_order[sch_tout_head ];
-				sch_timeout_order[timeout_idx] = 0xEE;//sch_tout_free;
-				sch_timeout_count--;
-				)
-		// Execute
-		(sch_callback_funcs[timeout_idx ])(sch_callback_context[timeout_idx] );
-		// Free the Timer slot for others to use
-		sch_timeout_state[timeout_idx] = SCH_STATE_IDLE;
-		//print_timeouts();
-	}*/
 }
 
 
