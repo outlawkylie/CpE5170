@@ -52,10 +52,12 @@ osThreadId defaultTaskHandle;
 osThreadId uartTxTaskHandle;
 osThreadId statsTaskHandle;
 osThreadId uartRxTaskHandle;
+osThreadId ADCtaskHandle;
 osMessageQId uartTxQueueHandle;
 osTimerId LEDTimerHandle;
 osSemaphoreId UartRxSemaphoreHandle;
 osSemaphoreId UartTxSemaphoreHandle;
+osSemaphoreId ADCSemaphoreHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -70,6 +72,7 @@ void StartDefaultTask(void const * argument);
 void StartUartTxTask(void const * argument);
 void StartStatsTask(void const * argument);
 void StartUartRxTask(void const * argument);
+void StartADCTask(void const * argument);
 void Callback01(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -140,6 +143,10 @@ int main(void)
   osSemaphoreDef(UartTxSemaphore);
   UartTxSemaphoreHandle = osSemaphoreCreate(osSemaphore(UartTxSemaphore), 1);
 
+  /* definition and creation of ADCSemaphore */
+  osSemaphoreDef(ADCSemaphore);
+  ADCSemaphoreHandle = osSemaphoreCreate(osSemaphore(ADCSemaphore), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -179,8 +186,13 @@ int main(void)
   osThreadDef(uartRxTask, StartUartRxTask, osPriorityIdle, 0, 128);
   uartRxTaskHandle = osThreadCreate(osThread(uartRxTask), NULL);
 
+  /* definition and creation of ADCtask */
+  osThreadDef(ADCtask, StartADCTask, osPriorityIdle, 0, 128);
+  ADCtaskHandle = osThreadCreate(osThread(ADCtask), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
+  //HAL_ADC_Start_IT(&hadc1);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -449,7 +461,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if( huart->Instance == USART2 )
 	{
 		osSemaphoreRelease( UartRxSemaphoreHandle );
-
 	}
 
 }
@@ -458,10 +469,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef* hadc)
 {
 	// ADC ready
-	char temp_str[50];
-	uint32_t temperature = HAL_ADC_GetValue(&hadc1);
-	sprintf(temp_str, "T=%d\n", (int)temperature);
-	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
+	if( hadc->Instance == ADC1 )
+	{
+		osSemaphoreRelease( ADCSemaphoreHandle );
+	}
 
 }
 
@@ -502,7 +513,7 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1); // ms
+    osDelay(100); // ms
   }
   /* USER CODE END 5 */
 }
@@ -541,7 +552,7 @@ void StartStatsTask(void const * argument)
 	UBaseType_t dstack;
 	UBaseType_t t2stack;
 	// separate buffers for two messages (to avoid overwritting)
-	uint8_t ps_buffer[40*4];
+	uint8_t ps_buffer[40*6];
 	uint8_t msg_buffer[80];
 	uint8_t *pTxBuff;
   /* Infinite loop */
@@ -551,13 +562,13 @@ void StartStatsTask(void const * argument)
 	    vTaskDelay(2000); // 1000 ticks = 1000 ms
 	    vTaskGetRunTimeStats( (char*) ps_buffer ); // Generate CPU utilization info (human readable)
 	    pTxBuff = ps_buffer;
-	    HAL_UART_Transmit(&huart2, pTxBuff, strlen((char*)pTxBuff), 40*4);
+	    HAL_UART_Transmit(&huart2, pTxBuff, strlen((char*)pTxBuff), 40*6);
 
 		dstack = uxTaskGetStackHighWaterMark(defaultTaskHandle);
 		t2stack = uxTaskGetStackHighWaterMark(statsTaskHandle);
 		sprintf((char*)msg_buffer, "Stack High Mark: T_default=%ld, T_2=%ld\n\r", dstack, t2stack);
 		pTxBuff = msg_buffer;
-	    HAL_UART_Transmit(&huart2, pTxBuff, strlen((char*)pTxBuff), 40*4);
+	    HAL_UART_Transmit(&huart2, pTxBuff, strlen((char*)pTxBuff), 40*6);
 
 	  }
   /* USER CODE END StartStatsTask */
@@ -582,7 +593,7 @@ void StartUartRxTask(void const * argument)
   	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
   	{
   		// Start temperature reading from ADC
-  		HAL_ADC_Start(&hadc1);
+  		//HAL_ADC_Start(&hadc1);
   	}
   	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
   	{
@@ -595,6 +606,29 @@ void StartUartRxTask(void const * argument)
 
   }
   /* USER CODE END StartUartRxTask */
+}
+
+/* USER CODE BEGIN Header_StartADCTask */
+/**
+* @brief Function implementing the ADCtask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartADCTask */
+void StartADCTask(void const * argument)
+{
+  /* USER CODE BEGIN StartADCTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osSemaphoreWait( ADCSemaphoreHandle, osWaitForever );
+
+	char temp_str[50];
+	uint32_t temperature = HAL_ADC_GetValue(&hadc1);
+	sprintf(temp_str, "T=%d\n", (int)temperature);
+	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
+  }
+  /* USER CODE END StartADCTask */
 }
 
 /* Callback01 function */
