@@ -446,21 +446,11 @@ uint8_t LED_speedup = 0;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
-	// receive successful a byte
-	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
+	if( huart->Instance == USART2 )
 	{
-		// Start temperature reading from ADC
-		HAL_ADC_Start(&hadc1);
-	}
-	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
-	{
-		// Start temperature reading from ADC
-		HAL_UART_Transmit(&huart2, msg_help, strlen((char*)msg_help),10);
-	}
+		osSemaphoreRelease( UartRxSemaphoreHandle );
 
-
-    /* Receive one byte in interrupt mode */
-    HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
+	}
 
 }
 
@@ -527,11 +517,10 @@ void StartDefaultTask(void const * argument)
 void StartUartTxTask(void const * argument)
 {
   /* USER CODE BEGIN StartUartTxTask */
-	uint32_t notification = 1;
-	uint8_t *pTxBuff = NULL;
 	/* Infinite loop */
 	for(;;)
 	{
+		osSemaphoreWait( UartTxSemaphoreHandle, osWaitForever );
 		osDelay(1);
 	}
   /* USER CODE END StartUartTxTask */
@@ -559,16 +548,17 @@ void StartStatsTask(void const * argument)
 	  for(;;)
 	  {
 	    //osDelay(1000); // 1000ms
-	    vTaskDelay(1000); // 1000 ticks = 1000 ms
+	    vTaskDelay(2000); // 1000 ticks = 1000 ms
 	    vTaskGetRunTimeStats( (char*) ps_buffer ); // Generate CPU utilization info (human readable)
 	    pTxBuff = ps_buffer;
-	    xQueueGenericSend(uartTxQueueHandle, (void *)&pTxBuff, 10, queueSEND_TO_BACK);
+	    HAL_UART_Transmit(&huart2, pTxBuff, strlen((char*)pTxBuff), 40*4);
 
 		dstack = uxTaskGetStackHighWaterMark(defaultTaskHandle);
 		t2stack = uxTaskGetStackHighWaterMark(statsTaskHandle);
 		sprintf((char*)msg_buffer, "Stack High Mark: T_default=%ld, T_2=%ld\n\r", dstack, t2stack);
 		pTxBuff = msg_buffer;
-	    xQueueGenericSend(uartTxQueueHandle, &pTxBuff, 10, queueSEND_TO_BACK);
+	    HAL_UART_Transmit(&huart2, pTxBuff, strlen((char*)pTxBuff), 40*4);
+
 	  }
   /* USER CODE END StartStatsTask */
 }
@@ -586,7 +576,23 @@ void StartUartRxTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+      osSemaphoreWait( UartRxSemaphoreHandle, osWaitForever );
+
+  	// receive successful a byte
+  	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
+  	{
+  		// Start temperature reading from ADC
+  		HAL_ADC_Start(&hadc1);
+  	}
+  	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
+  	{
+  		// Start temperature reading from ADC
+  		HAL_UART_Transmit(&huart2, msg_help, strlen((char*)msg_help),10);
+  	}
+
+      /* Receive one byte in interrupt mode */
+      HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
+
   }
   /* USER CODE END StartUartRxTask */
 }
