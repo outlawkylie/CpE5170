@@ -47,14 +47,15 @@ ADC_HandleTypeDef hadc1;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart2;
-DMA_HandleTypeDef hdma_usart2_tx;
-DMA_HandleTypeDef hdma_usart2_rx;
 
 osThreadId defaultTaskHandle;
 osThreadId uartTxTaskHandle;
 osThreadId statsTaskHandle;
+osThreadId uartRxTaskHandle;
 osMessageQId uartTxQueueHandle;
-osTimerId TIMER2Handle;
+osTimerId LEDTimerHandle;
+osSemaphoreId UartRxSemaphoreHandle;
+osSemaphoreId UartTxSemaphoreHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -62,13 +63,13 @@ osTimerId TIMER2Handle;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
 void StartDefaultTask(void const * argument);
 void StartUartTxTask(void const * argument);
 void StartStatsTask(void const * argument);
+void StartUartRxTask(void const * argument);
 void Callback01(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -80,7 +81,7 @@ uint16_t temperature;
 
 uint8_t msg1[] = "Triggered!";
 uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads ADC1 when asked with letter 't'";
-
+static int time = 1000;
 
 /* USER CODE END PFP */
 
@@ -117,7 +118,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_TIM4_Init();
@@ -131,14 +131,23 @@ int main(void)
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
+  /* Create the semaphores(s) */
+  /* definition and creation of UartRxSemaphore */
+  osSemaphoreDef(UartRxSemaphore);
+  UartRxSemaphoreHandle = osSemaphoreCreate(osSemaphore(UartRxSemaphore), 1);
+
+  /* definition and creation of UartTxSemaphore */
+  osSemaphoreDef(UartTxSemaphore);
+  UartTxSemaphoreHandle = osSemaphoreCreate(osSemaphore(UartTxSemaphore), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* Create the timer(s) */
-  /* definition and creation of TIMER2 */
-  osTimerDef(TIMER2, Callback01);
-  TIMER2Handle = osTimerCreate(osTimer(TIMER2), osTimerPeriodic, NULL);
+  /* definition and creation of LEDTimer */
+  osTimerDef(LEDTimer, Callback01);
+  LEDTimerHandle = osTimerCreate(osTimer(LEDTimer), osTimerPeriodic, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
@@ -165,6 +174,10 @@ int main(void)
   /* definition and creation of statsTask */
   osThreadDef(statsTask, StartStatsTask, osPriorityIdle, 0, 260);
   statsTaskHandle = osThreadCreate(osThread(statsTask), NULL);
+
+  /* definition and creation of uartRxTask */
+  osThreadDef(uartRxTask, StartUartRxTask, osPriorityIdle, 0, 128);
+  uartRxTaskHandle = osThreadCreate(osThread(uartRxTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
@@ -374,25 +387,6 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Stream5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
-  /* DMA1_Stream6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -449,21 +443,6 @@ uint8_t LED_speedup = 0;
 
 
 /* USER CODE BEGIN 4 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	if (GPIO_Pin == GPIO_PIN_13)
-		{
-		if (HAL_OK != HAL_UART_Transmit(&huart2, msg1, strlen((char*)msg1), 5) )
-			printf("Debug error while UART Tx");
-		// 5 ticks ~= 5ms
-		}
-	else
-		{
-		return;
-		}
-}
-
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
@@ -471,7 +450,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
 	{
 		// Start temperature reading from ADC
-		HAL_ADC_Start_IT(&hadc1);
+		HAL_ADC_Start(&hadc1);
 	}
 	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
 	{
@@ -494,8 +473,30 @@ void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef* hadc)
 	sprintf(temp_str, "T=%d\n", (int)temperature);
 	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
 
-	HAL_ADC_Start_IT(&hadc1);
 }
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == GPIO_PIN_13)
+		{
+		if (HAL_OK != HAL_UART_Transmit(&huart2, msg1, strlen((char*)msg1), 5) )
+			printf("Debug error while UART Tx");
+		// 5 ticks ~= 5ms
+		if( time < 101 )
+		{
+			  time = 1100;
+		}
+		time = time - 100;
+		osTimerStop( LEDTimerHandle );
+		osTimerStart( LEDTimerHandle, time );
+		}
+	else
+		{
+		return;
+		}
+}
+
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -511,12 +512,6 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-		//if (LED_delay < 1000) LED_delay += 100; else LED_delay=1000;
-		//vTaskDelay(LED_delay); // Ticks
-		//HAL_GPIO_WritePin(LED_G_PORT,LED_G_PIN, 1); //Toggle LED
-		//vTaskDelay(LED_delay);
-		//HAL_GPIO_WritePin(LED_G_PORT, LED_G_PIN, 0); //Toggle LED
-
     osDelay(1); // ms
   }
   /* USER CODE END 5 */
@@ -537,22 +532,6 @@ void StartUartTxTask(void const * argument)
 	/* Infinite loop */
 	for(;;)
 	{
-		if (notification!=0)
-		{
-			while (pdFALSE==xQueueReceive( uartTxQueueHandle, &pTxBuff, portMAX_DELAY ));
-			if (HAL_OK != HAL_UART_Transmit_DMA(&huart2, pTxBuff, strlen((const char*)pTxBuff)))
-			{
-				notification = 1;
-			}
-			else
-			{
-				notification = 0; // wait for ISR/Callback to indicate completion
-			}
-		}
-		else
-		{
-			notification = ulTaskNotifyTake( pdTRUE, 100 );
-		}
 		osDelay(1);
 	}
   /* USER CODE END StartUartTxTask */
@@ -594,10 +573,29 @@ void StartStatsTask(void const * argument)
   /* USER CODE END StartStatsTask */
 }
 
+/* USER CODE BEGIN Header_StartUartRxTask */
+/**
+* @brief Function implementing the uartRxTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartUartRxTask */
+void StartUartRxTask(void const * argument)
+{
+  /* USER CODE BEGIN StartUartRxTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartUartRxTask */
+}
+
 /* Callback01 function */
 void Callback01(void const * argument)
 {
   /* USER CODE BEGIN Callback01 */
+  HAL_GPIO_TogglePin(LED_G_PORT,LED_G_PIN);
 
   /* USER CODE END Callback01 */
 }
