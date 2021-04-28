@@ -43,6 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim4;
 
@@ -57,7 +58,6 @@ osMessageQId uartTxQueueHandle;
 osTimerId LEDTimerHandle;
 osSemaphoreId UartRxSemaphoreHandle;
 osSemaphoreId UartTxSemaphoreHandle;
-osSemaphoreId ADCSemaphoreHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -65,6 +65,7 @@ osSemaphoreId ADCSemaphoreHandle;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
@@ -121,6 +122,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_TIM4_Init();
@@ -142,10 +144,6 @@ int main(void)
   /* definition and creation of UartTxSemaphore */
   osSemaphoreDef(UartTxSemaphore);
   UartTxSemaphoreHandle = osSemaphoreCreate(osSemaphore(UartTxSemaphore), 1);
-
-  /* definition and creation of ADCSemaphore */
-  osSemaphoreDef(ADCSemaphore);
-  ADCSemaphoreHandle = osSemaphoreCreate(osSemaphore(ADCSemaphore), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -399,6 +397,22 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -471,7 +485,12 @@ void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef* hadc)
 	// ADC ready
 	if( hadc->Instance == ADC1 )
 	{
-		osSemaphoreRelease( ADCSemaphoreHandle );
+		//osSemaphoreRelease( ADCSemaphoreHandle );
+		uint32_t temp = HAL_ADC_GetValue(&hadc1);
+		uint8_t msg_buffer[80];
+		sprintf((char*)msg_buffer, "T:%d\n\r", temp);
+		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),5);
+
 	}
 
 }
@@ -593,7 +612,7 @@ void StartUartRxTask(void const * argument)
   	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
   	{
   		// Start temperature reading from ADC
-  		//HAL_ADC_Start(&hadc1);
+  		xTaskResumeFromISR( ADCtaskHandle );
   	}
   	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
   	{
@@ -621,7 +640,9 @@ void StartADCTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osSemaphoreWait( ADCSemaphoreHandle, osWaitForever );
+    //osSemaphoreWait( ADCSemaphoreHandle, osWaitForever );
+	  vTaskSuspend(NULL);
+	  HAL_ADC_Start_IT(&hadc1);
 
 	char temp_str[50];
 	uint32_t temperature = HAL_ADC_GetValue(&hadc1);
