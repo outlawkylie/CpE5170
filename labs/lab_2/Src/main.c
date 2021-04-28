@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,6 +72,15 @@ void StartStatsTask(void const * argument);
 void Callback01(void const * argument);
 
 /* USER CODE BEGIN PFP */
+const uint8_t RX_BUFF_SZ = 10;
+const uint8_t TX_BUFF_SZ = 50;
+volatile uint8_t rx_buff[1];
+volatile uint8_t tx_buff[50];
+uint16_t temperature;
+
+uint8_t msg1[] = "Triggered!";
+uint8_t msg_help[] = "This code monitors for blue/user button trigger, and reads ADC1 when asked with letter 't'";
+
 
 /* USER CODE END PFP */
 
@@ -157,7 +167,8 @@ int main(void)
   statsTaskHandle = osThreadCreate(osThread(statsTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
+
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -240,10 +251,10 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
@@ -422,6 +433,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -431,6 +446,56 @@ uint8_t LED_speedup = 0;
 
 #define LED_G_PORT GPIOA
 #define LED_G_PIN	GPIO_PIN_5
+
+
+/* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == GPIO_PIN_13)
+		{
+		if (HAL_OK != HAL_UART_Transmit(&huart2, msg1, strlen((char*)msg1), 5) )
+			printf("Debug error while UART Tx");
+		// 5 ticks ~= 5ms
+		}
+	else
+		{
+		return;
+		}
+}
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+	// receive successful a byte
+	if ((rx_buff[0]=='t')||(rx_buff[0] == 'T'))
+	{
+		// Start temperature reading from ADC
+		HAL_ADC_Start_IT(&hadc1);
+	}
+	if ((rx_buff[0]=='h')||(rx_buff[0]=='H')||(rx_buff[0] == '?'))
+	{
+		// Start temperature reading from ADC
+		HAL_UART_Transmit(&huart2, msg_help, strlen((char*)msg_help),10);
+	}
+
+
+    /* Receive one byte in interrupt mode */
+    HAL_UART_Receive_IT(&huart2, (uint8_t *)rx_buff, 1);
+
+}
+
+
+void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef* hadc)
+{
+	// ADC ready
+	char temp_str[50];
+	uint32_t temperature = HAL_ADC_GetValue(&hadc1);
+	sprintf(temp_str, "T=%d\n", (int)temperature);
+	HAL_UART_Transmit(&huart2, (uint8_t*)temp_str, strlen(temp_str),5);
+
+	HAL_ADC_Start_IT(&hadc1);
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -446,14 +511,13 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-		if (LED_delay < 1000) LED_delay += 100; else LED_delay=1000;
-		vTaskDelay(LED_delay); // Ticks
-		HAL_GPIO_WritePin(LED_G_PORT,LED_G_PIN, 1); //Toggle LED
-		vTaskDelay(LED_delay);
-		HAL_GPIO_WritePin(LED_G_PORT, LED_G_PIN, 0); //Toggle LED
+		//if (LED_delay < 1000) LED_delay += 100; else LED_delay=1000;
+		//vTaskDelay(LED_delay); // Ticks
+		//HAL_GPIO_WritePin(LED_G_PORT,LED_G_PIN, 1); //Toggle LED
+		//vTaskDelay(LED_delay);
+		//HAL_GPIO_WritePin(LED_G_PORT, LED_G_PIN, 0); //Toggle LED
 
-
-    //osDelay(1); // ms
+    osDelay(1); // ms
   }
   /* USER CODE END 5 */
 }
